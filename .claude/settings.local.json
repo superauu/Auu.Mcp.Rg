@@ -25,7 +25,12 @@
       "Bash(ROOT=\"/test/path\" npx auu-mcp-rg@1.2.0:*)",
       "Bash(where:*)",
       "Bash(npm pkg:*)",
-      "Bash(ROOT=\"E:\\code\\Auu.Mcp.Rg\" node comprehensive-test.js)"
+      "Bash(ROOT=\"E:\\code\\Auu.Mcp.Rg\" node comprehensive-test.js)",
+      "mcp__auu-mcp-rg__advanced-search",
+      "mcp__auu-mcp-rg__count-matches",
+      "mcp__auu-mcp-rg__list-files",
+      "mcp__auu-mcp-rg__list-file-types",
+      "Bash(npm version:*)"
     ],
     "deny": [],
     "ask": []

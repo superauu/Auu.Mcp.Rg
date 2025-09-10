@@ -1,6 +1,6 @@
 {
   "name": "auu-mcp-rg",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "A Windows-compatible MCP server for ripgrep with root directory restriction support",
   "main": "dist/index.js",
   "type": "module",

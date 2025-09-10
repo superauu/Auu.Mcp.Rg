@@ -346,7 +346,10 @@ function buildCommand(args: Args): string[] {
   if (args.sort_files) cmd.push('--sort-files');
   if (args.sort_r) cmd.push('--sortr');
   
-  cmd.push(args.pattern);
+  // 只在list_files模式外才添加模式
+  if (!args.list_files && !args.file_types) {
+    cmd.push(args.pattern);
+  }
   
   // 确定搜索路径：优先使用path，否则使用root
   let searchPath = '';
@@ -360,7 +363,9 @@ function buildCommand(args: Args): string[] {
   }
   
   if (searchPath) {
-    cmd.push(searchPath);
+    // 在Windows上将反斜杠转换为正斜杠，以避免路径解析问题
+    const normalizedPath = searchPath.replace(/\\/g, '/');
+    cmd.push(normalizedPath);
   }
   
   return cmd;
