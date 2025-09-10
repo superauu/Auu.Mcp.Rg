@@ -15,12 +15,125 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// 从环境变量读取默认root目录
+const DEFAULT_ROOT = process.env.ROOT;
+
+// 需要排除的非源代码文件夹列表
+const DEFAULT_EXCLUDE_DIRS = [
+  'node_modules',
+  'dist',
+  'build',
+  'out',
+  'target',
+  'bin',
+  'obj',
+  'Debug',
+  'Release',
+  'coverage',
+  '.nyc_output',
+  '.cache',
+  '.tmp',
+  '.temp',
+  'logs',
+  'log',
+  '.git',
+  '.svn',
+  '.hg',
+  '.idea',
+  '.vscode',
+  '.vs',
+  '*.swp',
+  '*.swo',
+  '*~',
+  '.DS_Store',
+  'Thumbs.db',
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.test',
+  '.env.production',
+  'vendor',
+  'vendors',
+  'bower_components',
+  'jspm_packages',
+  'flow-typed',
+  '.next',
+  '.nuxt',
+  '.vuepress',
+  '.docusaurus',
+  '.docz',
+  '.storybook',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  'site-packages',
+  'venv',
+  'env',
+  '.venv',
+  '.env',
+  'node_modules',
+  'Pods',
+  'Carthage',
+  'Checkouts',
+  'DerivedData',
+  'build',
+  '.gradle',
+  '.idea',
+  '.vs',
+  '*.pyc',
+  '*.pyo',
+  '*.class',
+  '*.jar',
+  '*.war',
+  '*.ear',
+  '*.dll',
+  '*.exe',
+  '*.so',
+  '*.dylib',
+  '*.a',
+  '*.lib',
+  '*.o',
+  '*.obj',
+  '*.bin',
+  '*.dat',
+  '*.db',
+  '*.sqlite',
+  '*.log',
+  '*.tmp',
+  '*.temp',
+  '*.bak',
+  '*.backup',
+  '*.swp',
+  '*.swo',
+  '*~',
+  '.DS_Store',
+  'Thumbs.db'
+];
+
+// 构建排除参数
+function buildExcludePatterns(userExclude?: string): string[] {
+  const patterns: string[] = [];
+  
+  // 添加默认排除模式
+  DEFAULT_EXCLUDE_DIRS.forEach(dir => {
+    patterns.push(`!${dir}`);
+  });
+  
+  // 添加用户自定义排除模式
+  if (userExclude) {
+    patterns.push(`!${userExclude}`);
+  }
+  
+  return patterns;
+}
+
 // 验证路径是否在root范围内
 function validatePath(root: string | undefined, path: string | undefined): string | undefined {
   if (!root) return path;
   
   const resolvedRoot = resolve(normalize(root));
   if (path) {
+    // 如果path是绝对路径，直接使用它
     const resolvedPath = resolve(normalize(path));
     // 检查路径是否在root范围内
     if (!resolvedPath.startsWith(resolvedRoot)) {
@@ -126,7 +239,7 @@ type Args = z.infer<typeof ArgsSchema>;
 const server = new Server(
   {
     name: "auu-mcp-rg",
-    version: "1.1.0",
+    version: "1.2.2",
   },
   {
     capabilities: {
@@ -144,6 +257,12 @@ function escapeArg(arg: string): string {
 
 function buildCommand(args: Args): string[] {
   const cmd: string[] = ['rg'];
+  
+  // 应用智能排除规则
+  const excludePatterns = buildExcludePatterns(args.exclude);
+  excludePatterns.forEach(pattern => {
+    cmd.push('-g', pattern);
+  });
   
   if (args.case_sensitive === false) cmd.push('-i');
   if (args.word_boundaries) cmd.push('-w');
@@ -208,7 +327,6 @@ function buildCommand(args: Args): string[] {
   if (args.replace !== undefined) cmd.push('--replace', args.replace);
   
   if (args.include) cmd.push('-g', args.include);
-  if (args.exclude) cmd.push('-g', `!${args.exclude}`);
   if (args.file_type) cmd.push('-t', args.file_type);
   if (args.type) cmd.push('-t', args.type);
   if (args.iglob) cmd.push('--iglob', args.iglob);
@@ -230,8 +348,17 @@ function buildCommand(args: Args): string[] {
   
   cmd.push(args.pattern);
   
-  // 确定搜索路径：优先使用root，如果没有root则使用path
-  let searchPath = args.root || args.path;
+  // 确定搜索路径：优先使用path，否则使用root
+  let searchPath = '';
+  if (args.path) {
+    searchPath = args.path;
+  } else if (args.root) {
+    searchPath = args.root;
+  } else {
+    // 如果既没有path也没有root，使用当前工作目录
+    searchPath = '.';
+  }
+  
   if (searchPath) {
     cmd.push(searchPath);
   }
@@ -240,12 +367,29 @@ function buildCommand(args: Args): string[] {
 }
 
 async function executeRipgrep(args: Args): Promise<string> {
-  // 验证路径
+  // 验证路径但不改变原始参数结构
   const validatedPath = validatePath(args.root, args.path);
-  const validatedArgs = { ...args, path: validatedPath };
+  const validatedArgs = { ...args };
+  
+  // 根据验证结果调整参数
+  if (validatedPath) {
+    if (args.path) {
+      validatedArgs.path = validatedPath;
+    } else if (args.root) {
+      validatedArgs.root = validatedPath;
+    } else {
+      validatedArgs.root = validatedPath;
+    }
+  }
+  
   const cmd = buildCommand(validatedArgs);
   
   return new Promise((resolve, reject) => {
+    // 设置超时时间 (30秒)
+    const timeout = setTimeout(() => {
+      rg.kill();
+      reject(new Error('Search timeout after 30 seconds'));
+    }, 30000);
     const rg = spawn('rg', cmd.slice(1), {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: false,
@@ -258,6 +402,11 @@ async function executeRipgrep(args: Args): Promise<string> {
     
     rg.stdout.on('data', (data) => {
       stdout += data.toString();
+      // 防止内存泄漏，限制输出大小 (约10MB)
+      if (stdout.length > 10 * 1024 * 1024) {
+        rg.kill();
+        resolve(stdout + "\n... Output truncated due to size limits");
+      }
     });
     
     rg.stderr.on('data', (data) => {
@@ -265,6 +414,7 @@ async function executeRipgrep(args: Args): Promise<string> {
     });
     
     rg.on('close', (code) => {
+      clearTimeout(timeout);
       if (code === 0) {
         resolve(stdout);
       } else if (code === 1) {
@@ -275,6 +425,7 @@ async function executeRipgrep(args: Args): Promise<string> {
     });
     
     rg.on('error', (error) => {
+      clearTimeout(timeout);
       reject(new Error(`Failed to execute ripgrep: ${error.message}`));
     });
   });
@@ -315,7 +466,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             max_matches: {
               type: "number",
-              description: "Maximum number of matches to return",
+              description: "Maximum number of matches to return (default: 100)",
             },
             case_sensitive: {
               type: "boolean",
@@ -427,34 +578,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     let result = '';
     
+    // 合并默认root目录和传入的参数
+    const finalArgs = { ...args };
+    if (DEFAULT_ROOT && !(args as any)?.root) {
+      (finalArgs as any).root = DEFAULT_ROOT;
+    }
+    
     switch (name) {
       case "search":
         result = await executeRipgrep({
-          pattern: (args as any)?.pattern || '',
-          root: (args as any)?.root,
-          path: (args as any)?.path,
-          include: (args as any)?.include,
-          exclude: (args as any)?.exclude,
-          context: (args as any)?.context,
-          case_sensitive: (args as any)?.case_sensitive,
-          word_boundaries: (args as any)?.word_boundaries,
-          file_type: (args as any)?.file_type,
+          pattern: (finalArgs as any)?.pattern || '',
+          root: (finalArgs as any)?.root,
+          path: (finalArgs as any)?.path,
+          include: (finalArgs as any)?.include,
+          exclude: (finalArgs as any)?.exclude,
+          context: (finalArgs as any)?.context,
+          max_matches: (finalArgs as any)?.max_matches || 100,
+          case_sensitive: (finalArgs as any)?.case_sensitive,
+          word_boundaries: (finalArgs as any)?.word_boundaries,
+          file_type: (finalArgs as any)?.file_type,
         });
         break;
         
       case "advanced-search":
-        result = await executeRipgrep(args as Args);
+        result = await executeRipgrep(finalArgs as Args);
         break;
         
       case "count-matches":
         result = await executeRipgrep({
-          pattern: (args as any)?.pattern || '',
-          root: (args as any)?.root,
-          path: (args as any)?.path,
-          include: (args as any)?.include,
-          exclude: (args as any)?.exclude,
-          case_sensitive: (args as any)?.case_sensitive,
-          file_type: (args as any)?.file_type,
+          pattern: (finalArgs as any)?.pattern || '',
+          root: (finalArgs as any)?.root,
+          path: (finalArgs as any)?.path,
+          include: (finalArgs as any)?.include,
+          exclude: (finalArgs as any)?.exclude,
+          case_sensitive: (finalArgs as any)?.case_sensitive,
+          file_type: (finalArgs as any)?.file_type,
           count: true,
         });
         break;
@@ -462,11 +620,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "list-files":
         result = await executeRipgrep({
           pattern: '',
-          root: (args as any)?.root,
-          path: (args as any)?.path,
-          include: (args as any)?.include,
-          exclude: (args as any)?.exclude,
-          file_type: (args as any)?.file_type,
+          root: (finalArgs as any)?.root,
+          path: (finalArgs as any)?.path,
+          include: (finalArgs as any)?.include,
+          exclude: (finalArgs as any)?.exclude,
+          file_type: (finalArgs as any)?.file_type,
           list_files: true,
         });
         break;

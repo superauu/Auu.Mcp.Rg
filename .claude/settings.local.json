@@ -14,7 +14,18 @@
       "mcp__auu-mcp-rg__search",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(ROOT=\"E:\\code\\Auu.Mcp.Rg\" node -e \"console.log(''测试环境变量:'', process.env.ROOT); console.log(''代码已构建完成，功能正常'')\")",
+      "Bash(rg:*)",
+      "Bash(npm view:*)",
+      "Bash(npx auu-mcp-rg@1.2.0:*)",
+      "Bash(ROOT=\"/test/path\" npx auu-mcp-rg@1.2.0:*)",
+      "Bash(where:*)",
+      "Bash(npm pkg:*)",
+      "Bash(ROOT=\"E:\\code\\Auu.Mcp.Rg\" node comprehensive-test.js)"
     ],
     "deny": [],
     "ask": []
