@@ -1,20 +1,20 @@
 # Auu.Mcp.Rg
 
-A Windows-compatible MCP (Model Context Protocol) server for ripgrep that provides powerful search capabilities with proper Windows support and security features.
+A cross-platform MCP (Model Context Protocol) server for ripgrep that provides powerful search capabilities with seamless support for Windows, macOS, and Linux, plus enhanced security features.
 
 ## Features
 
-- **Windows Compatible**: Properly handles Windows paths, command escaping, and process execution
-- **Search Tools**: Multiple search tools for different use cases
-- **Full ripgrep Support**: Supports all ripgrep options and flags
-- **npx Deployable**: Can be run directly with npx
+- **🌟 Cross-Platform Compatible**: Native support for Windows, macOS, and Linux with intelligent path handling (v1.2.6)
+- **🔧 Search Tools**: Multiple search tools for different use cases
+- **📋 Full ripgrep Support**: Supports all ripgrep options and flags
+- **🚀 npx Deployable**: Can be run directly with npx
 - **🆕 Global Root Directory**: Server-wide root directory configuration via environment variable (v1.2.0)
 - **🆕 Enhanced Security**: Automatic path validation and directory traversal protection (v1.2.0)
 - **🆕 Flexible Configuration**: Per-call root override capability (v1.2.0)
-- **🆕 Cross-Platform**: Works seamlessly on Windows, macOS, and Linux
 - **🆕 Smart Path Handling**: Properly combines root and path parameters for intuitive search scope (v1.2.1)
 - **🆕 Performance Safeguards**: Built-in result limits (default: 100), output size limits (10MB), and timeout protection (30s) (v1.2.1)
 - **🆕 Memory Protection**: Automatic output truncation to prevent memory leaks (v1.2.1)
+- **🆕 Intelligent Path Resolution**: Cross-platform path normalization and validation using Node.js path utilities (v1.2.6)
 
 ## Installation
 
@@ -241,6 +241,86 @@ For enhanced security, configure a default root directory to limit all search op
 - **AUU_MCP_RG_VERSION**: Version pinning for stability (optional)
 
 When `ROOT` is configured, all tools will automatically use this directory unless explicitly overridden.
+
+## Enhanced Cross-Platform Compatibility (v1.2.6)
+
+This server now offers superior cross-platform compatibility with intelligent path handling:
+
+### 🆕 Advanced Cross-Platform Features
+
+**Intelligent Path Resolution:**
+- Automatic detection and handling of platform-specific path formats
+- Smart relative path resolution relative to the root directory
+- Cross-platform path validation using Node.js `path.relative()` and `path.isAbsolute()`
+
+**Universal Path Normalization:**
+- Automatic conversion of Windows backslashes to forward slashes for ripgrep compatibility
+- Consistent path handling across all platforms
+- Support for mixed path formats in the same environment
+
+### Platform-Specific Optimizations
+
+#### Windows
+- **Native Path Support**: Full support for Windows-style paths (`C:\project\src`)
+- **Command Escaping**: Proper Windows command argument escaping
+- **Process Management**: Windows-optimized process spawning
+
+#### macOS & Linux
+- **Unix Path Standards**: Native support for POSIX paths (`/home/user/project`)
+- **Shell Integration**: Standard Unix shell behavior
+- **Performance**: Optimized for Unix process management
+
+### 🆕 Cross-Platform Examples
+
+**Windows Configuration:**
+```json
+{
+  "mcpServers": {
+    "auu-mcp-rg": {
+      "command": "npx",
+      "args": ["auu-mcp-rg"],
+      "env": {
+        "ROOT": "E:\\code\\my-project"
+      }
+    }
+  }
+}
+```
+
+**macOS/Linux Configuration:**
+```json
+{
+  "mcpServers": {
+    "auu-mcp-rg": {
+      "command": "npx",
+      "args": ["auu-mcp-rg"],
+      "env": {
+        "ROOT": "/home/username/my-project"
+      }
+    }
+  }
+}
+```
+
+**Cross-Platform Path Usage:**
+```json
+{
+  "name": "search",
+  "arguments": {
+    "pattern": "import",
+    "root": "E:\\code\\project",  // Windows path
+    "path": "src/utils"           // Relative path works on all platforms
+  }
+}
+```
+
+### 🆕 Technical Improvements (v1.2.6)
+
+- **Enhanced Path Validation**: Uses `path.relative()` instead of string matching for reliable cross-platform boundary checking
+- **Improved Relative Path Support**: Proper handling of relative paths relative to the root directory
+- **Memory Safety**: Improved path handling to prevent security issues
+- **Performance**: Optimized path resolution and validation algorithms
+- **Comprehensive Testing**: Added extensive cross-platform test coverage
 
 ## Windows Compatibility Fixes
 

@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
-import { dirname, resolve, normalize } from "path";
+import { dirname, resolve, normalize, relative, isAbsolute } from "path";
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -120,10 +120,17 @@ function validatePath(root, path) {
         return path;
     const resolvedRoot = resolve(normalize(root));
     if (path) {
-        // 如果path是绝对路径，直接使用它
-        const resolvedPath = resolve(normalize(path));
-        // 检查路径是否在root范围内
-        if (!resolvedPath.startsWith(resolvedRoot)) {
+        // 如果path是相对路径，相对于root目录解析
+        let resolvedPath;
+        if (isAbsolute(path)) {
+            resolvedPath = resolve(normalize(path));
+        }
+        else {
+            resolvedPath = resolve(resolvedRoot, normalize(path));
+        }
+        // 检查路径是否在root范围内 - 使用相对路径验证，跨平台兼容
+        const relativePath = relative(resolvedRoot, resolvedPath);
+        if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
             throw new Error(`Path '${path}' is outside the root directory '${root}'`);
         }
         return resolvedPath;
@@ -232,6 +239,11 @@ function escapeArg(arg) {
         return `"${arg.replace(/"/g, '""')}"`;
     }
     return arg.replace(/([\\'"(){}[\]!$&*|;<>?`~])/g, '\\$1');
+}
+// 标准化路径，确保跨平台兼容性
+function normalizePath(path) {
+    // 将所有反斜杠转换为正斜杠，ripgrep可以正确处理
+    return path.replace(/\\/g, '/');
 }
 function buildCommand(args) {
     const cmd = ['rg'];
@@ -413,8 +425,8 @@ function buildCommand(args) {
         searchPath = '.';
     }
     if (searchPath) {
-        // 在Windows上将反斜杠转换为正斜杠，以避免路径解析问题
-        const normalizedPath = searchPath.replace(/\\/g, '/');
+        // 标准化路径，确保跨平台兼容性
+        const normalizedPath = normalizePath(searchPath);
         cmd.push(normalizedPath);
     }
     return cmd;
